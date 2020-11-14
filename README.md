@@ -1,5 +1,9 @@
-# Unlisted Repository
+# Coursera IBM Data Science Certification - Capstone Project
 
-The default `master` branch is empty except for this file to "unlist" the repository (i.e. remove it from Google/GitHub Code search)
+This is my submission for the Data Science capstone project.
 
-If you are reading this, you are likely not meant to be here.
+I'll probably add more details once I actually decide what I'm doing.
+
+---
+
+I'm updating this repository in my own personal capacity and am not conveying any rights to any intellectial property of any third parties.
