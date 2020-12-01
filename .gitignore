@@ -142,3 +142,6 @@ data/
 
 # Hide credentials
 secrets.yaml
+
+# Ignore .vscode
+.vscode/
