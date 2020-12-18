@@ -42,14 +42,18 @@ class PipelineStep(ABC):
     async def process_batch(self, batch: Iterable) -> AsyncGenerator:
         pass
 
-    async def _loop(self):
-        event_loop = asyncio.get_event_loop()
-        while event_loop.is_running():
+    def start(self):
+        """Starts processing data in the step's data queue."""
+        event_loop = asyncio.get_running_loop()
+        return event_loop.create_task(self._loop(event_loop))
+
+    async def _loop(self, loop):
+        while loop.is_running():
             if self.async_batches:
-                task = event_loop.create_task(self._create_batch())
+                task = loop.create_task(self._create_batch())
                 self._all_tasks.append(task)
             elif self._task is None or self._task.done:
-                task = event_loop.create_task(self._create_batch())
+                task = loop.create_task(self._create_batch())
                 self._task = task
                 self._all_tasks.append(task)
             await asyncio.sleep(0.1)

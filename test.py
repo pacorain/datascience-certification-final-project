@@ -43,7 +43,7 @@ class TestPipelineStep(unittest.TestCase):
         step = SimplePipelineStep()
         step.put("any record")
         step.attach(output)
-        asyncio.get_running_loop().create_task(step._loop())
+        step.start()
         await step.join()
         for i in range(1, 4):
             datum = output.get_nowait()
@@ -69,7 +69,7 @@ class TestPipelineStep(unittest.TestCase):
         pipeline_step.attach(output)
         for i in range(250):
             pipeline_step.put(i)
-        asyncio.get_running_loop().create_task(pipeline_step._loop())
+        pipeline_step.start()
         await pipeline_step.join()
         self.assertEqual([100, 100, 50], list(output.queue)) 
         
