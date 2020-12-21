@@ -1,4 +1,4 @@
-from etl import PipelineStep
+from etl import PipelineStep, DataPipeline
 from typing import AsyncGenerator
 from queue import Queue
 import unittest
@@ -72,6 +72,17 @@ class TestPipelineStep(unittest.TestCase):
         pipeline_step.start()
         await pipeline_step.join()
         self.assertEqual([100, 100, 50], list(output.queue)) 
+
+class TestDataPipeline(unittest.TestCase):
+    def test_pipeline_step_started(self):
+        step = Mock(PipelineStep)
+        pipeline = DataPipeline(step)
+        pipeline.start()
+        step.start.assert_called()
+
+    def test_empty_pipeline_raises_error(self):
+        pipeline = DataPipeline()
+        self.assertRaises(ValueError, pipeline.start)
         
     
 if __name__ == '__main__':
