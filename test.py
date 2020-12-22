@@ -16,6 +16,11 @@ class SimplePipelineStep(PipelineStep):
         yield 2
         yield 3
 
+class EchoPipelineStep(PipelineStep):
+    async def process_batch(self, batch) -> AsyncGenerator:
+        for record in batch:
+            yield record
+
 class SquarePipelineStep(PipelineStep):
     async def process_batch(self, batch) -> AsyncGenerator:
         for record in batch:
@@ -83,7 +88,33 @@ class TestDataPipeline(unittest.TestCase):
     def test_empty_pipeline_raises_error(self):
         pipeline = DataPipeline()
         self.assertRaises(ValueError, pipeline.start)
-        
+
+    def test_list_arg_is_not_unpacked(self):
+        step1 = SimplePipelineStep()
+        step2 = SquarePipelineStep()
+        step3 = SquarePipelineStep()
+        pipeline1 = DataPipeline(step1, step2, step3)
+        pipeline2 = DataPipeline([step1, step2, step3])
+        self.assertEqual(pipeline1.steps, pipeline2.steps)
+
+    def test_step_1_output_attached_to_step_2(self):
+        step1 = SimplePipelineStep()
+        step2 = SquarePipelineStep()
+        pipeline = DataPipeline(step1, step2)
+        pipeline.start()
+        self.assertIn(step2.data, step1.outputs)
+
+    @asynctest
+    async def test_step_1_results_in_step_2(self):
+        step1 = SimplePipelineStep()
+        step1.data.put(1)
+        step2 = EchoPipelineStep()
+        step2.attach(Queue())
+        pipeline = DataPipeline(step1, step2)
+        pipeline.start()
+        await pipeline.join()
+        self.assertEqual([1, 2, 3], list(step2.outputs[0].queue))
+
     
 if __name__ == '__main__':
     unittest.main()
