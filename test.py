@@ -96,8 +96,9 @@ class TestDataPipeline(unittest.TestCase):
         pipeline1 = DataPipeline(step1, step2, step3)
         pipeline2 = DataPipeline([step1, step2, step3])
         self.assertEqual(pipeline1.steps, pipeline2.steps)
-
-    def test_step_1_output_attached_to_step_2(self):
+    
+    @asynctest
+    async def test_step_1_output_attached_to_step_2(self):
         step1 = SimplePipelineStep()
         step2 = SquarePipelineStep()
         pipeline = DataPipeline(step1, step2)
@@ -114,6 +115,17 @@ class TestDataPipeline(unittest.TestCase):
         pipeline.start()
         await pipeline.join()
         self.assertEqual([1, 2, 3], list(step2.outputs[0].queue))
+        
+    @asynctest
+    async def test_results_are_data_of_final_step(self):
+        step1 = SimplePipelineStep()
+        step2 = SquarePipelineStep()
+        step3 = SquarePipelineStep()
+        pipeline = DataPipeline(step1, step2, step3, data=[1])
+        pipeline.start()
+        await pipeline.join()
+        results = pipeline.results
+        self.assertEqual(results, [1, 16, 81])
 
     
 if __name__ == '__main__':

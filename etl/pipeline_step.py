@@ -34,6 +34,7 @@ class PipelineStep(ABC):
     def __init__(self):
         self.data = Queue()
         self.outputs = []
+        self.running = False
         self._duplicate_cache = set()
         self._task: asyncio.Task = None
         self._all_tasks = []
@@ -45,7 +46,12 @@ class PipelineStep(ABC):
     def start(self):
         """Starts processing data in the step's data queue."""
         event_loop = asyncio.get_event_loop()
-        return event_loop.create_task(self._loop(event_loop))
+        task = event_loop.create_task(self._loop(event_loop))
+        self.running = True
+        return task
+
+    def stop(self):
+        self.running = False
 
     async def _loop(self, loop):
         while loop.is_running():
