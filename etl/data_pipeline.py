@@ -1,6 +1,6 @@
 import asyncio
 from etl.pipeline_step import PipelineStep
-from typing import Optional, Union, Dict
+from typing import Optional, Union, Dict, List
 from collections.abc import Collection
 from queue import Queue
 
@@ -16,7 +16,7 @@ class DataPipeline():
     data : collection
         Initial data to send to the first pipeline step for processing.
     """
-    def __init__(self, *steps: Optional[Union[Collection[PipelineStep], PipelineStep]], data=[]):
+    def __init__(self, *steps: Optional[Union[List[PipelineStep], PipelineStep]], data=[]):
         if len(steps) == 1 and isinstance(steps[0], Collection):
             self.steps = steps[0]
         else:
