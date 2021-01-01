@@ -113,7 +113,8 @@ class PipelineStep(ABC):
         else:
             self.outputs.append(output)
 
-    def is_done(self, ignore_exeptions=False):
+    @property
+    def done(self):
         """Checks if the queue is empty and all batches are complete.
         
         Parameters
@@ -122,16 +123,11 @@ class PipelineStep(ABC):
             Adjusts behavior when an exception is encountered in one of the tasks. By default, the
             exception is raised. Set to `True` to bypass exceptions.
         """
-        if not ignore_exeptions:
-            exceptions = [task.exception() for task in self._all_tasks if task.exception() is not None]
-            if exceptions:
-                raise Exception(exceptions)
         for task in self._all_tasks:
             if not task.done():
                 return False
+            task.result()  # Raise task exceptions
         return self.data.empty()
-
-    done = property(is_done)
 
     async def join(self):
         """Blocks execution until pipeline_step.done is true"""

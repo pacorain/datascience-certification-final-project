@@ -91,8 +91,7 @@ class TestPipelineStep(unittest.TestCase):
             await pipeline_step.join()
             self.fail("Join did not raise exception")
         except Exception as e:
-            self.assertIsInstance(e.args[0][0], ZeroDivisionError)
-            self.assertTrue(len(e.args[0]) == 1)
+            self.assertIsInstance(e, ZeroDivisionError)
 
 class TestDataPipeline(unittest.TestCase):
     def test_pipeline_step_started(self):
