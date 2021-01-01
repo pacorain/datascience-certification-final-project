@@ -88,7 +88,6 @@ class PipelineStep(ABC):
         if self.drop_duplicates:
             if self.is_duplicate(record):
                 return
-            self._duplicate_cache.add(hash(record))
         self.data.put(record)
     
     def is_duplicate(self, record):
@@ -97,7 +96,10 @@ class PipelineStep(ABC):
         By default, object hashes are stored, and checked against incoming object hashes. This method
         can be overriden to change the behavior that determins whether or not a record is a duplicate.
         """
-        return hash(record) in self._duplicate_cache
+        if hash(record) not in self._duplicate_cache:
+            self._duplicate_cache.add(hash(record))
+            return False
+        return True
 
     def attach(self, output):
         """Attach a queue to this pipeline step's output.
