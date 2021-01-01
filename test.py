@@ -1,4 +1,4 @@
-from etl import PipelineStep, DataPipeline
+from etl import PipelineStep, DataPipeline, pipeline_step
 from typing import AsyncGenerator
 from queue import Queue
 import unittest
@@ -77,6 +77,22 @@ class TestPipelineStep(unittest.TestCase):
         pipeline_step.start()
         await pipeline_step.join()
         self.assertEqual([100, 100, 50], list(output.queue)) 
+
+    @asynctest
+    async def test_step_raises_error_when_batch_rose_error(self):
+        class PoorlyWrittenStep(PipelineStep):
+            async def process_batch(self, batch):
+                yield 1/0
+        pipeline_step = PoorlyWrittenStep()
+        pipeline_step.put('placeholder')
+        self.assertFalse(pipeline_step.done)
+        pipeline_step.start()
+        try:
+            await pipeline_step.join()
+            self.fail("Join did not raise exception")
+        except Exception as e:
+            self.assertIsInstance(e.args[0][0], ZeroDivisionError)
+            self.assertTrue(len(e.args[0]) == 1)
 
 class TestDataPipeline(unittest.TestCase):
     def test_pipeline_step_started(self):
