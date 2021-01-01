@@ -108,10 +108,7 @@ class PipelineStep(ABC):
             The output attached. Any object yielded by `process_batch` will be sent to this queue or
             pipeline step.
         """
-        if isinstance(output, PipelineStep):
-            self.outputs.append(output.data)
-        else:
-            self.outputs.append(output)
+        self.outputs.append(output)
 
     @property
     def done(self):

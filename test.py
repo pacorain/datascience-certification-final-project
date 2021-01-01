@@ -113,12 +113,12 @@ class TestDataPipeline(unittest.TestCase):
         self.assertEqual(pipeline1.steps, pipeline2.steps)
     
     @asynctest
-    async def test_step_1_output_attached_to_step_2(self):
+    async def test_step_1_attached_to_step_2(self):
         step1 = SimplePipelineStep()
         step2 = SquarePipelineStep()
         pipeline = DataPipeline(step1, step2)
         pipeline.start()
-        self.assertIn(step2.data, step1.outputs)
+        self.assertIn(step2, step1.outputs)
 
     @asynctest
     async def test_step_1_results_in_step_2(self):
