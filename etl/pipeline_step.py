@@ -66,7 +66,7 @@ class PipelineStep(ABC):
 
     async def _create_batch(self):
         batch = []
-        for _ in range(self.max_batch_size):
+        for _ in range(self.max_batch_size or self.data.qsize()):
             try:
                 batch.append(self.data.get_nowait())
             except Empty:
