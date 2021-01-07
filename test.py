@@ -93,6 +93,34 @@ class TestPipelineStep(unittest.TestCase):
         except Exception as e:
             self.assertIsInstance(e, ZeroDivisionError)
 
+    @asynctest
+    async def test_setup(self):
+        class FakeDatabase:
+            def __init__(self):
+                self.connected = False
+            
+            async def connect(self, *args):
+                await asyncio.sleep(0.5)
+                self.connected = True
+        
+        class UploadToFakeDatabase(PipelineStep):
+            def __init__(self):
+                super().__init__()
+                self.database = FakeDatabase()
+
+            async def process_batch(self, batch):
+                yield
+
+            async def setup(self):
+                await self.database.connect()
+
+        step = UploadToFakeDatabase()
+        self.assertFalse(step.database.connected)
+        step.put('placeholder')
+        step.start()
+        await step.join()
+        self.assertTrue(step.database.connected)
+
 class TestDataPipeline(unittest.TestCase):
     def test_pipeline_step_started(self):
         step = Mock(PipelineStep)

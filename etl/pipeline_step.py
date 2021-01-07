@@ -38,6 +38,10 @@ class PipelineStep(ABC):
         self._duplicate_cache = set()
         self._task: asyncio.Task = None
         self._all_tasks = []
+        self._setup = None
+
+    async def setup(self):
+        pass
     
     @abstractmethod
     async def process_batch(self, batch: Iterable) -> AsyncGenerator:
@@ -46,6 +50,7 @@ class PipelineStep(ABC):
     def start(self):
         """Starts processing data in the step's data queue."""
         event_loop = asyncio.get_event_loop()
+        self._setup = event_loop.create_task(self.setup())
         task = event_loop.create_task(self._loop(event_loop))
         self.running = True
         return task
@@ -54,6 +59,7 @@ class PipelineStep(ABC):
         self.running = False
 
     async def _loop(self, loop):
+        await self._setup
         while loop.is_running():
             if self.async_batches:
                 task = loop.create_task(self._create_batch())
