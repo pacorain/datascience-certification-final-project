@@ -32,7 +32,11 @@ class DataPipeline():
         This coroutine manages starting the steps, waiting for all of them to complete, and returning the results.
         """
         self.start()
-        await self.join()
+        try:
+            await self.join()
+        finally:
+            for step in self.steps:
+                step.stop()
         return self.results
 
     def start(self):
