@@ -49,6 +49,11 @@ class DataPipeline():
             self.steps[0].data.put(datum)
         for step in self.steps:
             self.loops[step] = step.start()
+    
+    @property
+    def done(self):
+        """Returns True if all of the steps are done."""
+        return all([step.done for step in self.steps])
 
     async def join(self):
         """Waits for all running steps to process all incoming data, and then stops their loops to check for new data."""
