@@ -1,4 +1,4 @@
-from etl import PipelineStep, DataPipeline
+from etl import PipelineStep, DataPipeline, pipeline_step
 from typing import AsyncGenerator
 from queue import Queue
 import unittest
@@ -78,6 +78,49 @@ class TestPipelineStep(unittest.TestCase):
         await pipeline_step.join()
         self.assertEqual([100, 100, 50], list(output.queue)) 
 
+    @asynctest
+    async def test_step_raises_error_when_batch_rose_error(self):
+        class PoorlyWrittenStep(PipelineStep):
+            async def process_batch(self, batch):
+                yield 1/0
+        pipeline_step = PoorlyWrittenStep()
+        pipeline_step.put('placeholder')
+        self.assertFalse(pipeline_step.done)
+        pipeline_step.start()
+        try:
+            await pipeline_step.join()
+            self.fail("Join did not raise exception")
+        except Exception as e:
+            self.assertIsInstance(e, ZeroDivisionError)
+
+    @asynctest
+    async def test_setup(self):
+        class FakeDatabase:
+            def __init__(self):
+                self.connected = False
+            
+            async def connect(self, *args):
+                await asyncio.sleep(0.5)
+                self.connected = True
+        
+        class UploadToFakeDatabase(PipelineStep):
+            def __init__(self):
+                super().__init__()
+                self.database = FakeDatabase()
+
+            async def process_batch(self, batch):
+                yield
+
+            async def setup(self):
+                await self.database.connect()
+
+        step = UploadToFakeDatabase()
+        self.assertFalse(step.database.connected)
+        step.put('placeholder')
+        step.start()
+        await step.join()
+        self.assertTrue(step.database.connected)
+
 class TestDataPipeline(unittest.TestCase):
     def test_pipeline_step_started(self):
         step = Mock(PipelineStep)
@@ -98,12 +141,12 @@ class TestDataPipeline(unittest.TestCase):
         self.assertEqual(pipeline1.steps, pipeline2.steps)
     
     @asynctest
-    async def test_step_1_output_attached_to_step_2(self):
+    async def test_step_1_attached_to_step_2(self):
         step1 = SimplePipelineStep()
         step2 = SquarePipelineStep()
         pipeline = DataPipeline(step1, step2)
         pipeline.start()
-        self.assertIn(step2.data, step1.outputs)
+        self.assertIn(step2, step1.outputs)
 
     @asynctest
     async def test_step_1_results_in_step_2(self):

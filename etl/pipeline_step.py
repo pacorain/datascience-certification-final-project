@@ -38,6 +38,10 @@ class PipelineStep(ABC):
         self._duplicate_cache = set()
         self._task: asyncio.Task = None
         self._all_tasks = []
+        self._setup = None
+
+    async def setup(self):
+        pass
     
     @abstractmethod
     async def process_batch(self, batch: Iterable) -> AsyncGenerator:
@@ -46,6 +50,7 @@ class PipelineStep(ABC):
     def start(self):
         """Starts processing data in the step's data queue."""
         event_loop = asyncio.get_event_loop()
+        self._setup = event_loop.create_task(self.setup())
         task = event_loop.create_task(self._loop(event_loop))
         self.running = True
         return task
@@ -54,6 +59,7 @@ class PipelineStep(ABC):
         self.running = False
 
     async def _loop(self, loop):
+        await self._setup
         while loop.is_running():
             if self.async_batches:
                 task = loop.create_task(self._create_batch())
@@ -66,7 +72,7 @@ class PipelineStep(ABC):
 
     async def _create_batch(self):
         batch = []
-        for _ in range(self.max_batch_size):
+        for _ in range(self.max_batch_size or self.data.qsize()):
             try:
                 batch.append(self.data.get_nowait())
             except Empty:
@@ -88,7 +94,6 @@ class PipelineStep(ABC):
         if self.drop_duplicates:
             if self.is_duplicate(record):
                 return
-            self._duplicate_cache.add(hash(record))
         self.data.put(record)
     
     def is_duplicate(self, record):
@@ -97,7 +102,10 @@ class PipelineStep(ABC):
         By default, object hashes are stored, and checked against incoming object hashes. This method
         can be overriden to change the behavior that determins whether or not a record is a duplicate.
         """
-        return hash(record) in self._duplicate_cache
+        if hash(record) not in self._duplicate_cache:
+            self._duplicate_cache.add(hash(record))
+            return False
+        return True
 
     def attach(self, output):
         """Attach a queue to this pipeline step's output.
@@ -108,17 +116,22 @@ class PipelineStep(ABC):
             The output attached. Any object yielded by `process_batch` will be sent to this queue or
             pipeline step.
         """
-        if isinstance(output, PipelineStep):
-            self.outputs.append(output.data)
-        else:
-            self.outputs.append(output)
+        self.outputs.append(output)
 
     @property
     def done(self):
-        """Checks if the queue is empty and all batches are complete."""
+        """Checks if the queue is empty and all batches are complete.
+        
+        Parameters
+        ----------
+        ignore_exeptions : bool, default False
+            Adjusts behavior when an exception is encountered in one of the tasks. By default, the
+            exception is raised. Set to `True` to bypass exceptions.
+        """
         for task in self._all_tasks:
             if not task.done():
                 return False
+            task.result()  # Raise task exceptions
         return self.data.empty()
 
     async def join(self):

@@ -1,6 +1,6 @@
 import asyncio
 from etl.pipeline_step import PipelineStep
-from typing import Optional, Union, Dict
+from typing import Optional, Union, Dict, List
 from collections.abc import Collection
 from queue import Queue
 
@@ -16,7 +16,7 @@ class DataPipeline():
     data : collection
         Initial data to send to the first pipeline step for processing.
     """
-    def __init__(self, *steps: Optional[Union[Collection[PipelineStep], PipelineStep]], data=[]):
+    def __init__(self, *steps: Optional[Union[List[PipelineStep], PipelineStep]], data=[]):
         if len(steps) == 1 and isinstance(steps[0], Collection):
             self.steps = steps[0]
         else:
@@ -32,7 +32,11 @@ class DataPipeline():
         This coroutine manages starting the steps, waiting for all of them to complete, and returning the results.
         """
         self.start()
-        await self.join()
+        try:
+            await self.join()
+        finally:
+            for step in self.steps:
+                step.stop()
         return self.results
 
     def start(self):
@@ -45,6 +49,15 @@ class DataPipeline():
             self.steps[0].data.put(datum)
         for step in self.steps:
             self.loops[step] = step.start()
+            
+    def stop(self):
+        for step in self.steps:
+            step.stop()
+    
+    @property
+    def done(self):
+        """Returns True if all of the steps are done."""
+        return all([step.done for step in self.steps])
 
     async def join(self):
         """Waits for all running steps to process all incoming data, and then stops their loops to check for new data."""
