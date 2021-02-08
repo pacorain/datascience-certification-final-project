@@ -49,6 +49,10 @@ class DataPipeline():
             self.steps[0].data.put(datum)
         for step in self.steps:
             self.loops[step] = step.start()
+            
+    def stop(self):
+        for step in self.steps:
+            step.stop()
     
     @property
     def done(self):
